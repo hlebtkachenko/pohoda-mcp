@@ -1,4 +1,4 @@
-import { gunzipSync, inflateSync } from "node:zlib";
+import { gunzipSync, inflateSync, inflateRawSync } from "node:zlib";
 import * as path from "node:path";
 import iconv from "iconv-lite";
 
@@ -68,7 +68,7 @@ export class PohodaClient {
         const encoding = resp.headers.get("content-encoding");
         const dataBuf =
           encoding === "gzip" ? gunzipSync(rawBuf) :
-          encoding === "deflate" ? inflateSync(rawBuf) :
+          encoding === "deflate" ? safeInflate(rawBuf) :
           rawBuf;
 
         const contentType = resp.headers.get("content-type") ?? "";
@@ -131,4 +131,15 @@ export class PohodaClient {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function safeInflate(buf: Buffer): Buffer {
+  try {
+    return inflateSync(buf);
+  } catch (err) {
+    // Some servers send raw (headerless) deflate streams; retry without the
+    // zlib wrapper. Other error kinds are rethrown rather than masked.
+    if ((err as NodeJS.ErrnoException).code !== "Z_DATA_ERROR") throw err;
+    return inflateRawSync(buf);
+  }
 }
