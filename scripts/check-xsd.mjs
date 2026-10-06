@@ -34,6 +34,7 @@ async function fetchSchemas() {
 
 function sample(schema, key = "") {
   if (/date|lastChanges/i.test(key)) return "2026-01-15";
+  if (key === "pdfPath") return "C:\\Export\\sample.pdf";
   if (schema.enum) return schema.enum[0];
   if (schema.anyOf) return sample(schema.anyOf[0], key);
   switch (schema.type) {
