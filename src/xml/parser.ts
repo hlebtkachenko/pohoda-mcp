@@ -15,6 +15,7 @@ const parser = new XMLParser({
       "listContract.contract",
       "listBank.bankItem",
       "listCash.voucher",
+      "listVoucher.voucher",
       "listIntDoc.intDoc",
       "listStock.stock",
       "listPrijemka.prijemka",
@@ -41,7 +42,9 @@ const parser = new XMLParser({
     for (const p of arrayPaths) {
       if (jp.endsWith(p)) return true;
     }
-    if (jp.includes("Detail") && jp.includes("Item")) return true;
+    // Line items: invoiceDetail.invoiceItem, orderDetail.orderItem, ...
+    const [parent = "", last = ""] = jp.split(".").slice(-2);
+    if (parent.endsWith("Detail") && last.endsWith("Item")) return true;
     return false;
   },
   parseTagValue: true,
@@ -86,7 +89,17 @@ export function parseResponse(xml: string): PohodaResponse {
   return { state, version, items, raw: doc };
 }
 
+export function assertResponseOk(response: PohodaResponse): void {
+  const failed = response.items.find((it) => it.state === "error");
+  if (failed) throw new Error(`POHODA returned error: ${failed.note ?? "no detail"}`);
+  if (response.state === "error") {
+    const pack = (response.raw as Record<string, Record<string, unknown>>)?.responsePack;
+    throw new Error(`POHODA returned error: ${pack?.["@_note"] ?? "no detail"}`);
+  }
+}
+
 export function extractListData(response: PohodaResponse): unknown[] {
+  assertResponseOk(response);
   const results: unknown[] = [];
   for (const item of response.items) {
     if (!item.data) continue;
@@ -119,6 +132,7 @@ export function extractImportResult(response: PohodaResponse): {
   const item = response.items[0];
   const ok = item.state === "ok";
   const parts: string[] = [item.note ?? item.state];
+  if (!ok) parts.push(...importDetailNotes(item.data));
 
   if (item.data && typeof item.data === "object") {
     const d = item.data as Record<string, unknown>;
@@ -131,4 +145,13 @@ export function extractImportResult(response: PohodaResponse): {
   }
 
   return { success: ok, message: parts.join("; ") };
+}
+
+function importDetailNotes(data: unknown): string[] {
+  const details = ((data as Record<string, Record<string, unknown>>)?.importDetails?.detail) ?? [];
+  const arr = Array.isArray(details) ? details : [details];
+  return arr
+    .map((d) => d as Record<string, unknown>)
+    .filter((d) => d.state === "error" || d.state === "warning")
+    .map((d) => [d.note, d.XPath].filter(Boolean).join(" at "));
 }

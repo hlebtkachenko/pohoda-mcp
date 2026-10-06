@@ -1,6 +1,7 @@
 import { gunzipSync, inflateSync, inflateRawSync } from "node:zlib";
 import * as path from "node:path";
 import iconv from "iconv-lite";
+import type { MServerController } from "./mserver.js";
 
 export interface PohodaClientConfig {
   url: string;
@@ -19,6 +20,9 @@ export class PohodaClient {
   private readonly timeout: number;
   private readonly maxRetries: number;
   private readonly checkDuplicity: boolean;
+  private controller: MServerController | null = null;
+  private startAttempted = false;
+  private startedByUs = false;
 
   constructor(config: PohodaClientConfig) {
     this.baseUrl = config.url.replace(/\/+$/, "");
@@ -31,7 +35,37 @@ export class PohodaClient {
     this.authHeader = `Basic ${Buffer.from(creds, "utf-8").toString("base64")}`;
   }
 
+  /** Lets the client start mServer on first use when it is not running. */
+  setController(controller: MServerController): void {
+    this.controller = controller;
+  }
+
+  /** Stops mServer on shutdown, but only if this process started it. */
+  stopIfStartedByUs(): void {
+    if (this.startedByUs) this.controller?.stop();
+    this.startedByUs = false;
+  }
+
+  private async ensureRunning(): Promise<void> {
+    if (!this.controller || this.startAttempted) return;
+    this.startAttempted = true;
+    try {
+      await this.fetchStatus("");
+      return;
+    } catch {
+      // not running, start it below
+    }
+    try {
+      await this.controller.start(() => this.fetchStatus(""));
+      this.startedByUs = true;
+    } catch (e) {
+      this.startAttempted = false;
+      throw e;
+    }
+  }
+
   async sendXml(xml: string): Promise<string> {
+    await this.ensureRunning();
     const body = new Uint8Array(iconv.encode(xml, "win1250"));
 
     let lastError: Error | null = null;
@@ -92,7 +126,17 @@ export class PohodaClient {
   }
 
   async getStatus(): Promise<string> {
-    const resp = await fetch(`${this.baseUrl}/status`, {
+    await this.ensureRunning();
+    return this.fetchStatus("");
+  }
+
+  async getCompanyInfo(): Promise<string> {
+    await this.ensureRunning();
+    return this.fetchStatus("?companyDetail");
+  }
+
+  private async fetchStatus(query: string): Promise<string> {
+    const resp = await fetch(`${this.baseUrl}/status${query}`, {
       method: "GET",
       headers: { "STW-Authorization": this.authHeader },
       signal: AbortSignal.timeout(10_000),
@@ -102,18 +146,8 @@ export class PohodaClient {
     return iconv.decode(buf, "win1250");
   }
 
-  async getCompanyInfo(): Promise<string> {
-    const resp = await fetch(`${this.baseUrl}/status?companyDetail`, {
-      method: "GET",
-      headers: { "STW-Authorization": this.authHeader },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!resp.ok) throw new Error(`Company info failed: HTTP ${resp.status}`);
-    const buf = Buffer.from(await resp.arrayBuffer());
-    return iconv.decode(buf, "win1250");
-  }
-
   async downloadFile(filePath: string): Promise<Buffer> {
+    await this.ensureRunning();
     const normalized = path.posix.normalize(filePath).replace(/^\/+/, "");
     if (normalized.startsWith("..") || path.posix.isAbsolute(normalized)) {
       throw new Error("Path traversal attempt blocked.");

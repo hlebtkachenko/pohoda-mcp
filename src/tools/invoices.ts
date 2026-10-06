@@ -5,18 +5,23 @@ import { buildExportRequest, buildImportDoc } from "../xml/builder.js";
 import { NS } from "../xml/namespaces.js";
 import { parseResponse, extractListData, extractImportResult } from "../xml/parser.js";
 import { ok, err, jsonResult } from "../core/types.js";
-import { applyInvoiceFilter, type InvoiceFilterParams } from "../core/filters.js";
+import { applyFilter } from "../core/filters.js";
 import { toIsoDate } from "../core/shared.js";
 
-const invoiceTypeEnum = z.enum([
+export const INVOICE_TYPES = [
   "issuedInvoice",
-  "issuedCreditNote",
+  "issuedCreditNotice",
+  "issuedProformaInvoice",
   "receivedInvoice",
+  "receivedCreditNotice",
+  "receivedProformaInvoice",
   "issuedAdvanceInvoice",
   "receivedAdvanceInvoice",
   "receivable",
   "commitment",
-]);
+] as const;
+
+const invoiceTypeEnum = z.enum(INVOICE_TYPES);
 
 const invoiceItemSchema = z.object({
   text: z.string(),
@@ -30,13 +35,13 @@ const invoiceItemSchema = z.object({
 export function registerInvoiceTools(server: McpServer, client: PohodaClient): void {
   server.tool(
     "pohoda_list_invoices",
-    "List invoices from POHODA. Supports filtering by invoice type, ID, date range, variable symbol, company name, IČO, or last changes. Returns JSON array of matching invoice records.",
+    "List invoices from POHODA. Supports filtering by invoice type, ID, date range, document number, company name, IČO, or last changes. Returns JSON array of matching invoice records.",
     {
-      invoiceType: invoiceTypeEnum.optional().describe("Filter by invoice type"),
+      invoiceType: invoiceTypeEnum.describe("Invoice type (required by POHODA)"),
       id: z.number().optional().describe("Filter by invoice ID"),
       dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
       dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-      variableSymbol: z.string().optional().describe("Filter by variable symbol"),
+      number: z.string().optional().describe("Filter by document number"),
       companyName: z.string().optional().describe("Filter by company name"),
       ico: z.string().optional().describe("Filter by IČO"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
@@ -49,18 +54,17 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
           NS.lst,
           "lst:requestInvoice",
           (req) => {
-            if (params.invoiceType) req.att("invoiceType", params.invoiceType);
-            const filterParams: InvoiceFilterParams = {
+            applyFilter(req, {
               id: params.id,
               dateFrom: params.dateFrom,
               dateTill: params.dateTill,
-              variableSymbol: params.variableSymbol,
+              number: params.number,
               companyName: params.companyName,
               ico: params.ico,
               lastChanges: params.lastChanges,
-            };
-            applyInvoiceFilter(req, filterParams);
-          }
+            });
+          },
+          { invoiceType: params.invoiceType }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -158,30 +162,6 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
               `Invoice created successfully.${result.producedId != null ? ` ID: ${result.producedId}` : ""} ${result.message}`
             )
           : err(result.message);
-      } catch (e) {
-        return err((e as Error).message);
-      }
-    }
-  );
-
-  server.tool(
-    "pohoda_delete_invoice",
-    "Delete an invoice from POHODA by ID. Requires the invoice ID.",
-    {
-      id: z.number().describe("Invoice ID to delete (required)"),
-    },
-    async (params) => {
-      try {
-        const xml = buildImportDoc({ ico: client.ico }, (item) => {
-          const inv = item.ele(NS.inv, "inv:invoice").att("version", "2.0");
-          const actionType = inv.ele(NS.inv, "inv:actionType");
-          const del = actionType.ele(NS.inv, "inv:delete");
-          const filter = del.ele(NS.ftr, "ftr:filter");
-          filter.ele(NS.ftr, "ftr:id").txt(String(params.id));
-        });
-        const response = await client.sendXml(xml);
-        const result = extractImportResult(parseResponse(response));
-        return result.success ? ok(`Invoice deleted successfully. ${result.message}`) : err(result.message);
       } catch (e) {
         return err((e as Error).message);
       }

@@ -10,13 +10,13 @@ const SETTINGS_TYPES: Record<string, { listTag: string; listNs: string; requestT
   numericalSeries: { listTag: "lst:listNumericalSeriesRequest", listNs: NS.lst, requestTag: "lst:requestNumericalSeries" },
   cashRegister: { listTag: "lst:listCashRegisterRequest", listNs: NS.lst, requestTag: "lst:requestCashRegister" },
   bankAccount: { listTag: "lst:listBankAccountRequest", listNs: NS.lst, requestTag: "lst:requestBankAccount" },
-  centre: { listTag: "lst:listCentreRequest", listNs: NS.lCen, requestTag: "lst:requestCentre" },
-  activity: { listTag: "lst:listActivityRequest", listNs: NS.lAcv, requestTag: "lst:requestActivity" },
+  centre: { listTag: "lCen:listCentreRequest", listNs: NS.lCen, requestTag: "lCen:requestCentre" },
+  activity: { listTag: "lAcv:listActivityRequest", listNs: NS.lAcv, requestTag: "lAcv:requestActivity" },
   payment: { listTag: "lst:listPaymentRequest", listNs: NS.lst, requestTag: "lst:requestPayment" },
   store: { listTag: "lst:listStoreRequest", listNs: NS.lst, requestTag: "lst:requestStore" },
   storage: { listTag: "lst:listStorageRequest", listNs: NS.lst, requestTag: "lst:requestStorage" },
   category: { listTag: "lst:listCategoryRequest", listNs: NS.lst, requestTag: "lst:requestCategory" },
-  accountingUnit: { listTag: "lst:listAccountingUnitRequest", listNs: NS.lst, requestTag: "lst:requestAccountingUnit" },
+  accountingUnit: { listTag: "acu:listAccountingUnitRequest", listNs: NS.acu, requestTag: "acu:requestAccountingUnit" },
 };
 
 const settingsTypeEnum = Object.keys(SETTINGS_TYPES) as [string, ...string[]];

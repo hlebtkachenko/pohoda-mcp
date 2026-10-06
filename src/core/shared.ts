@@ -10,3 +10,7 @@ export function toIsoDate(dd_mm_yyyy: string): string {
   if (!m) throw new Error(`Invalid date format: ${dd_mm_yyyy}. Use DD.MM.YYYY or YYYY-MM-DD.`);
   return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
 }
+
+export function toIsoDateTime(value: string): string {
+  return /T\d{2}:\d{2}/.test(value) ? value : `${toIsoDate(value)}T00:00:00`;
+}

@@ -1,11 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { PohodaClient } from "../client.js";
-import { buildExportRequest, buildImportDoc, type XMLBuilder } from "../xml/builder.js";
+import { buildExportRequest, buildImportDoc } from "../xml/builder.js";
 import { NS } from "../xml/namespaces.js";
 import { parseResponse, extractListData, extractImportResult } from "../xml/parser.js";
 import { ok, err, jsonResult } from "../core/types.js";
-import type { ListFilterParams } from "../core/filters.js";
+import { applyFilter } from "../core/filters.js";
 import { toIsoDate } from "../core/shared.js";
 
 const orderTypeEnum = z.enum(["issuedOrder", "receivedOrder"]);
@@ -19,30 +19,17 @@ const orderItemSchema = z.object({
   code: z.string().optional(),
 });
 
-function applyOrderFilter(parent: XMLBuilder, params: ListFilterParams & { numberOrder?: string }): void {
-  const hasAny = Object.values(params).some((v) => v != null && v !== "");
-  if (!hasAny) return;
-
-  const ftr = parent.ele(NS.ftr, "ftr:filter");
-  if (params.id != null) ftr.ele(NS.ftr, "ftr:id").txt(String(params.id));
-  if (params.dateFrom) ftr.ele(NS.ftr, "ftr:dateFrom").txt(toIsoDate(params.dateFrom));
-  if (params.dateTill) ftr.ele(NS.ftr, "ftr:dateTill").txt(toIsoDate(params.dateTill));
-  if (params.companyName) ftr.ele(NS.ftr, "ftr:selectedCompany").txt(params.companyName);
-  if (params.numberOrder) ftr.ele(NS.ftr, "ftr:selectedNumberOrder").txt(params.numberOrder);
-  if (params.lastChanges) ftr.ele(NS.ftr, "ftr:lastChanges").txt(toIsoDate(params.lastChanges));
-}
-
 export function registerOrderTools(server: McpServer, client: PohodaClient): void {
   server.tool(
     "pohoda_list_orders",
     "List orders from POHODA. Supports filtering by order type, ID, date range, company name, order number, or last changes. Returns JSON array of matching order records.",
     {
-      orderType: orderTypeEnum.optional().describe("Filter by order type (issuedOrder or receivedOrder)"),
+      orderType: orderTypeEnum.describe("Order type: issuedOrder or receivedOrder (required by POHODA)"),
       id: z.number().optional().describe("Filter by order ID"),
       dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
       dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
       companyName: z.string().optional().describe("Filter by company name"),
-      numberOrder: z.string().optional().describe("Filter by order number"),
+      number: z.string().optional().describe("Filter by document number"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
     async (params) => {
@@ -53,16 +40,16 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
           NS.lst,
           "lst:requestOrder",
           (req) => {
-            if (params.orderType) req.att("orderType", params.orderType);
-            applyOrderFilter(req, {
+            applyFilter(req, {
               id: params.id,
               dateFrom: params.dateFrom,
               dateTill: params.dateTill,
               companyName: params.companyName,
-              numberOrder: params.numberOrder,
+              number: params.number,
               lastChanges: params.lastChanges,
             });
-          }
+          },
+          { orderType: params.orderType }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -156,9 +143,10 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
 
   server.tool(
     "pohoda_delete_order",
-    "Delete an order from POHODA by ID. Requires the order ID.",
+    "Delete an order from POHODA by ID. Requires the order ID and its type.",
     {
       id: z.number().describe("Order ID to delete (required)"),
+      orderType: orderTypeEnum.describe("Order type (issuedOrder or receivedOrder)"),
     },
     async (params) => {
       try {
@@ -166,8 +154,8 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
           const ord = item.ele(NS.ord, "ord:order").att("version", "2.0");
           const actionType = ord.ele(NS.ord, "ord:actionType");
           const del = actionType.ele(NS.ord, "ord:delete");
-          const filter = del.ele(NS.ftr, "ftr:filter");
-          filter.ele(NS.ftr, "ftr:id").txt(String(params.id));
+          const agenda = params.orderType === "issuedOrder" ? "vydane_objednavky" : "prijate_objednavky";
+          del.ele(NS.ftr, "ftr:filter").att("agenda", agenda).ele(NS.ftr, "ftr:id").txt(String(params.id));
         });
         const response = await client.sendXml(xml);
         const result = extractImportResult(parseResponse(response));

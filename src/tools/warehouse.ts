@@ -81,6 +81,7 @@ function buildWarehouseCreateTool(
   headerTag: string,
   detailTag: string,
   itemTag: string,
+  stockOnlyItems = false,
 ) {
   server.tool(
     toolName,
@@ -106,6 +107,13 @@ function buildWarehouseCreateTool(
             const det = doc.ele(ns, `${prefix}:${detailTag}`);
             for (const i of params.items) {
               const li = det.ele(ns, `${prefix}:${itemTag}`);
+              if (stockOnlyItems) {
+                // Transfer items only move existing stock cards: quantity + stock item.
+                if (!i.stockCode) throw new Error(`Every ${docTag} item needs stockCode.`);
+                li.ele(ns, `${prefix}:quantity`).txt(String(i.quantity));
+                li.ele(ns, `${prefix}:stockItem`).ele(NS.typ, "typ:stockItem").ele(NS.typ, "typ:ids").txt(i.stockCode);
+                continue;
+              }
               li.ele(ns, `${prefix}:text`).txt(i.text);
               li.ele(ns, `${prefix}:quantity`).txt(String(i.quantity));
               if (i.unit) li.ele(ns, `${prefix}:unit`).txt(i.unit);
@@ -140,5 +148,5 @@ export function registerWarehouseTools(server: McpServer, client: PohodaClient) 
   buildWarehouseCreateTool(server, client, "pohoda_create_prodejka", "Create a sales document (prodejka) in POHODA", NS.pro, "pro", "prodejka", "prodejkaHeader", "prodejkaDetail", "prodejkaItem");
 
   buildWarehouseListTool(server, client, "pohoda_list_prevodky", "Export transfer documents (převodky) from POHODA", "lst:listPrevodkaRequest", "lst:requestPrevodka");
-  buildWarehouseCreateTool(server, client, "pohoda_create_prevodka", "Create a transfer document (převodka) in POHODA", NS.pre, "pre", "prevodka", "prevodkaHeader", "prevodkaDetail", "prevodkaItem");
+  buildWarehouseCreateTool(server, client, "pohoda_create_prevodka", "Create a transfer document (převodka) in POHODA. Items move existing stock cards, so each item needs stockCode; text, unit, price and VAT are ignored.", NS.pre, "pre", "prevodka", "prevodkaHeader", "prevodkaDetail", "prevodkaItem", true);
 }

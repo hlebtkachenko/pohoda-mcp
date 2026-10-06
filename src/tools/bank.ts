@@ -55,7 +55,6 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
       date: z.string().describe("Document date (DD.MM.YYYY or YYYY-MM-DD)"),
       text: z.string().optional().describe("Document text/description"),
       account: z.string().optional().describe("Bank account identifier"),
-      bankCode: z.string().optional().describe("Bank code"),
       symVar: z.string().optional().describe("Variable symbol"),
       symConst: z.string().optional().describe("Constant symbol"),
       symSpec: z.string().optional().describe("Specific symbol"),
@@ -80,8 +79,7 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
           if (params.account) {
             header.ele(NS.bnk, "bnk:account").ele(NS.typ, "typ:ids").txt(params.account);
           }
-          if (params.bankCode) header.ele(NS.bnk, "bnk:bankCode").txt(params.bankCode);
-          header.ele(NS.bnk, "bnk:date").txt(toIsoDate(params.date));
+          header.ele(NS.bnk, "bnk:datePayment").txt(toIsoDate(params.date));
           if (params.text) header.ele(NS.bnk, "bnk:text").txt(params.text);
           if (params.symVar) header.ele(NS.bnk, "bnk:symVar").txt(params.symVar);
           if (params.symConst) header.ele(NS.bnk, "bnk:symConst").txt(params.symConst);
@@ -110,7 +108,7 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
               bankItem.ele(NS.bnk, "bnk:rateVAT").txt(it.rateVAT);
               bankItem
                 .ele(NS.bnk, "bnk:homeCurrency")
-                .ele(NS.typ, "typ:unitPrice")
+                .ele(NS.bnk, "bnk:unitPrice")
                 .txt(String(it.unitPrice));
             }
           }

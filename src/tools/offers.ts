@@ -38,7 +38,6 @@ export function registerOfferTools(server: McpServer, client: PohodaClient): voi
           NS.lst,
           "lst:requestOffer",
           (req) => {
-            if (params.offerType) req.att("offerType", params.offerType);
             const filterParams: ListFilterParams = {
               id: params.id,
               dateFrom: params.dateFrom,
@@ -47,7 +46,8 @@ export function registerOfferTools(server: McpServer, client: PohodaClient): voi
               lastChanges: params.lastChanges,
             };
             applyFilter(req, filterParams);
-          }
+          },
+          { offerType: params.offerType }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);

@@ -22,6 +22,9 @@ import { registerWarehouseTools } from "./tools/warehouse.js";
 import { registerProductionTools } from "./tools/production.js";
 import { registerReportTools } from "./tools/reports.js";
 import { registerSettingsTools } from "./tools/settings.js";
+import { registerPrintTools } from "./tools/print.js";
+import { registerResources } from "./resources.js";
+import { MServerController } from "./mserver.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, "..", "package.json"), "utf-8")) as { version: string };
@@ -36,10 +39,19 @@ const client = new PohodaClient({
   checkDuplicity: process.env.POHODA_CHECK_DUPLICITY === "true",
 });
 
-const server = new McpServer({
-  name: "pohoda-mcp",
-  version: pkg.version,
-});
+if (process.env.POHODA_EXE_PATH && process.env.POHODA_CONFIG_NAME) {
+  client.setController(new MServerController(process.env.POHODA_EXE_PATH, process.env.POHODA_CONFIG_NAME));
+}
+
+const server = new McpServer(
+  { name: "pohoda-mcp", version: pkg.version },
+  {
+    instructions:
+      "POHODA accounting via mServer XML. Use the pohoda_list_* tools to read, pohoda_create_*/update_*/delete_* to write, " +
+      "pohoda_print for PDFs, and pohoda_raw_xml only for operations no dedicated tool covers. " +
+      "Allowed enum values are in resources pohoda://enums/*. Lists are capped (POHODA_LIST_LIMIT, default 100): narrow filters when a result says it was truncated.",
+  },
+);
 
 registerSystemTools(server, client);
 registerAddressTools(server, client);
@@ -56,6 +68,16 @@ registerWarehouseTools(server, client);
 registerProductionTools(server, client);
 registerReportTools(server, client);
 registerSettingsTools(server, client);
+registerPrintTools(server, client);
+registerResources(server);
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, () => {
+    client.stopIfStartedByUs();
+    process.exit(0);
+  });
+}
+process.stdin.on("end", () => client.stopIfStartedByUs());
 
 const transport = new StdioServerTransport();
 server.connect(transport).catch((e) => {

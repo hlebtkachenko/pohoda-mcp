@@ -2,6 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { PohodaClient } from "../client.js";
 import { ok, err } from "../core/types.js";
+import { buildRawDoc } from "../xml/builder.js";
+import { parseResponse } from "../xml/parser.js";
 import { XMLParser } from "fast-xml-parser";
 
 function parseStatusXml(xml: string): { server?: string; status?: string; processing?: string; message?: string } {
@@ -94,6 +96,32 @@ export function registerSystemTools(server: McpServer, client: PohodaClient): vo
           return ok(`File size: ${size} bytes (${sizeKb.toFixed(1)} KB)\n\nBase64 content:\n${base64}`);
         }
         return ok(`File size: ${size} bytes (${sizeKb.toFixed(1)} KB). File too large for inline transfer; use external download for files over 100 KB.`);
+      } catch (e) {
+        return err((e as Error).message);
+      }
+    }
+  );
+
+  server.registerTool(
+    "pohoda_raw_xml",
+    {
+      title: "Send raw POHODA XML",
+      description:
+        "Send any POHODA XML request not covered by the dedicated tools. Pass only the dataPackItem content, e.g. a full <inv:invoice version=\"2.0\">...</inv:invoice> " +
+        "or <lst:listInvoiceRequest>...; the dataPack envelope and all POHODA namespace prefixes (inv, typ, ftr, lst, lStk, lAdb, ...) are added automatically. " +
+        "Can create, change or delete data. Schema docs: https://www.stormware.cz/pohoda/xml/",
+      inputSchema: {
+        xml: z.string().min(1).describe("Inner XML of one dataPackItem"),
+        note: z.string().optional().describe("Note stored with the request in POHODA's log"),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    },
+    async ({ xml, note }) => {
+      try {
+        const parsed = parseResponse(await client.sendXml(buildRawDoc({ ico: client.ico, note }, xml)));
+        const failed = parsed.state === "error" || parsed.items.some((it) => it.state === "error");
+        const text = JSON.stringify({ state: parsed.state, items: parsed.items }, null, 2);
+        return failed ? err(text) : ok(text);
       } catch (e) {
         return err((e as Error).message);
       }

@@ -5,6 +5,7 @@ import { buildExportRequest } from "../xml/builder.js";
 import { NS } from "../xml/namespaces.js";
 import { parseResponse, extractListData } from "../xml/parser.js";
 import { err, jsonResult } from "../core/types.js";
+import { toIsoDate } from "../core/shared.js";
 import { applyFilter } from "../core/filters.js";
 
 export function registerReportTools(server: McpServer, client: PohodaClient): void {
@@ -37,10 +38,11 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
 
   server.tool(
     "pohoda_list_balance",
-    "List balance records from POHODA. Read-only export. Supports filtering by date range. Returns JSON array of balance records.",
+    "List open balance (saldo) records from POHODA: receivables and payables per document and partner. Read-only export. Returns JSON array of balance records.",
     {
-      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
+      dateTo: z.string().optional().describe("Balance as of this date (DD.MM.YYYY or YYYY-MM-DD); default today"),
+      onlyUnbalanced: z.boolean().optional().describe("Leave out fully settled records"),
+      pairByIco: z.boolean().optional().describe("Pair by pairing symbol and IČO instead of pairing symbol only"),
     },
     async (params) => {
       try {
@@ -49,7 +51,12 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
           "lst:listBalanceRequest",
           NS.lst,
           "lst:requestBalance",
-          (req) => applyFilter(req, params)
+          (req) => {
+            if (params.dateTo) req.ele(NS.lst, "lst:dateTo").txt(toIsoDate(params.dateTo));
+            if (params.onlyUnbalanced) req.ele(NS.lst, "lst:removeBalancedRec").txt("true");
+            req.ele(NS.lst, "lst:pairing").txt(params.pairByIco ? "PairingSymbolIC" : "PairingSymbol");
+          },
+          { version: "1.0" }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -89,19 +96,15 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
 
   server.tool(
     "pohoda_list_vat",
-    "List VAT classification records from POHODA. Read-only export. Supports filtering by date range. Returns JSON array of VAT classification records.",
-    {
-      dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
-      dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
-    },
-    async (params) => {
+    "List the VAT classification codebook (členění DPH) from POHODA: the codes used to assign documents to VAT return lines. Read-only. Returns JSON array.",
+    {},
+    async () => {
       try {
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listClassificationVATRequest",
           NS.lst,
           "lst:requestClassificationVAT",
-          (req) => applyFilter(req, params)
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);

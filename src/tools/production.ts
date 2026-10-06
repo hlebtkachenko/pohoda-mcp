@@ -44,12 +44,9 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
       text: z.string().optional().describe("Description"),
       note: z.string().optional(),
       items: z.array(z.object({
-        text: z.string(),
         quantity: z.number(),
-        unitPrice: z.number(),
-        unit: z.string().optional(),
-        stockCode: z.string().optional(),
-      })).optional().describe("Production items"),
+        stockCode: z.string().describe("Code of the produced stock card"),
+      })).optional().describe("Produced items"),
     },
     async (params) => {
       try {
@@ -63,14 +60,10 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
           if (params.items?.length) {
             const det = doc.ele(NS.vyr, "vyr:vyrobaDetail");
             for (const i of params.items) {
+              // Production items reference the produced stock card: quantity + stock item only.
               const li = det.ele(NS.vyr, "vyr:vyrobaItem");
-              li.ele(NS.vyr, "vyr:text").txt(i.text);
               li.ele(NS.vyr, "vyr:quantity").txt(String(i.quantity));
-              if (i.unit) li.ele(NS.vyr, "vyr:unit").txt(i.unit);
-              li.ele(NS.vyr, "vyr:homeCurrency").ele(NS.typ, "typ:unitPrice").txt(String(i.unitPrice));
-              if (i.stockCode) {
-                li.ele(NS.vyr, "vyr:stockItem").ele(NS.typ, "typ:stockItem").ele(NS.typ, "typ:ids").txt(i.stockCode);
-              }
+              li.ele(NS.vyr, "vyr:stockItem").ele(NS.typ, "typ:stockItem").ele(NS.typ, "typ:ids").txt(i.stockCode);
             }
           }
         });
@@ -116,7 +109,9 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
     "pohoda_create_service",
     "Create a service record in POHODA",
     {
-      date: z.string().describe("Service date"),
+      date: z.string().describe("Date received (DD.MM.YYYY or YYYY-MM-DD)"),
+      subject: z.string().describe("Serviced item, e.g. device name"),
+      warranty: z.boolean().optional().describe("Warranty repair (default: post-warranty)"),
       text: z.string().optional().describe("Description"),
       partnerName: z.string().optional(),
       note: z.string().optional(),
@@ -126,13 +121,15 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const doc = item.ele(NS.ser, "ser:service").att("version", "2.0");
           const hdr = doc.ele(NS.ser, "ser:serviceHeader");
-          hdr.ele(NS.ser, "ser:date").txt(toIsoDate(params.date));
+          hdr.ele(NS.ser, "ser:serviceType").txt(params.warranty ? "warranty" : "postWarranty");
+          hdr.ele(NS.ser, "ser:received").txt(toIsoDate(params.date));
           if (params.text) hdr.ele(NS.ser, "ser:text").txt(params.text);
           if (params.partnerName) {
             const pi = hdr.ele(NS.ser, "ser:partnerIdentity");
             pi.ele(NS.typ, "typ:address").ele(NS.typ, "typ:name").txt(params.partnerName);
           }
           if (params.note) hdr.ele(NS.ser, "ser:note").txt(params.note);
+          doc.ele(NS.ser, "ser:serviceSubject").ele(NS.ser, "ser:subject").ele(NS.ser, "ser:text").txt(params.subject);
         });
         const resp = parseResponse(await client.sendXml(xml));
         const result = extractImportResult(resp);

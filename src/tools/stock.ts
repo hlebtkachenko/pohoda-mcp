@@ -5,8 +5,7 @@ import { buildExportRequest, buildImportDoc } from "../xml/builder.js";
 import { NS } from "../xml/namespaces.js";
 import { parseResponse, extractListData, extractImportResult } from "../xml/parser.js";
 import { ok, err, jsonResult } from "../core/types.js";
-import { applyFilter } from "../core/filters.js";
-import { toIsoDate } from "../core/shared.js";
+import { toIsoDateTime } from "../core/shared.js";
 
 export function registerStockTools(server: McpServer, client: PohodaClient) {
   server.tool(
@@ -34,7 +33,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
             if (params.code) ftr.ele(NS.ftr, "ftr:code").txt(params.code);
             if (params.name) ftr.ele(NS.ftr, "ftr:name").txt(params.name);
             if (params.store) ftr.ele(NS.ftr, "ftr:store").ele(NS.typ, "typ:ids").txt(params.store);
-            if (params.lastChanges) ftr.ele(NS.ftr, "ftr:lastChanges").txt(toIsoDate(params.lastChanges));
+            if (params.lastChanges) ftr.ele(NS.ftr, "ftr:lastChanges").txt(toIsoDateTime(params.lastChanges));
           },
         );
         const resp = parseResponse(await client.sendXml(xml));
@@ -56,8 +55,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
       unit: z.string().optional().describe("Unit of measure (e.g., ks, kg, m)"),
       purchasingPrice: z.number().optional().describe("Purchasing price"),
       sellingPrice: z.number().optional().describe("Selling price without VAT"),
-      sellingPriceVAT: z.number().optional().describe("Selling price with VAT"),
-      rateVAT: z.enum(["none", "low", "high"]).optional().describe("VAT rate"),
+      rateVAT: z.enum(["none", "low", "high"]).optional().describe("Selling VAT rate"),
       store: z.string().optional().describe("Store name"),
       note: z.string().optional().describe("Note"),
       description: z.string().optional().describe("Extended description"),
@@ -75,8 +73,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
           if (params.store) hdr.ele(NS.stk, "stk:storage").ele(NS.typ, "typ:ids").txt(params.store);
           if (params.purchasingPrice != null) hdr.ele(NS.stk, "stk:purchasingPrice").txt(String(params.purchasingPrice));
           if (params.sellingPrice != null) hdr.ele(NS.stk, "stk:sellingPrice").txt(String(params.sellingPrice));
-          if (params.sellingPriceVAT != null) hdr.ele(NS.stk, "stk:sellingPriceVAT").txt(String(params.sellingPriceVAT));
-          if (params.rateVAT) hdr.ele(NS.stk, "stk:rateVAT").txt(params.rateVAT);
+          if (params.rateVAT) hdr.ele(NS.stk, "stk:sellingRateVAT").txt(params.rateVAT);
           if (params.quantity != null) hdr.ele(NS.stk, "stk:count").txt(String(params.quantity));
           if (params.description) hdr.ele(NS.stk, "stk:description").txt(params.description);
           if (params.note) hdr.ele(NS.stk, "stk:note").txt(params.note);
@@ -102,7 +99,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
       unit: z.string().optional().describe("New unit"),
       purchasingPrice: z.number().optional().describe("New purchasing price"),
       sellingPrice: z.number().optional().describe("New selling price"),
-      rateVAT: z.enum(["none", "low", "high"]).optional().describe("New VAT rate"),
+      rateVAT: z.enum(["none", "low", "high"]).optional().describe("New selling VAT rate"),
       note: z.string().optional().describe("New note"),
     },
     async (params) => {
@@ -119,7 +116,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
           if (params.unit) hdr.ele(NS.stk, "stk:unit").txt(params.unit);
           if (params.purchasingPrice != null) hdr.ele(NS.stk, "stk:purchasingPrice").txt(String(params.purchasingPrice));
           if (params.sellingPrice != null) hdr.ele(NS.stk, "stk:sellingPrice").txt(String(params.sellingPrice));
-          if (params.rateVAT) hdr.ele(NS.stk, "stk:rateVAT").txt(params.rateVAT);
+          if (params.rateVAT) hdr.ele(NS.stk, "stk:sellingRateVAT").txt(params.rateVAT);
           if (params.note) hdr.ele(NS.stk, "stk:note").txt(params.note);
         });
         const resp = parseResponse(await client.sendXml(xml));

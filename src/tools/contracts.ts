@@ -52,7 +52,7 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
     "Create a new contract in POHODA. Optional: number, datePlan, text, partner details, note.",
     {
       number: z.string().optional().describe("Contract number"),
-      datePlan: z.string().optional().describe("Planned date (DD.MM.YYYY or YYYY-MM-DD)"),
+      datePlan: z.string().optional().describe("Planned start date (DD.MM.YYYY or YYYY-MM-DD)"),
       text: z.string().optional().describe("Contract text/description"),
       partnerName: z.string().optional().describe("Partner company name"),
       partnerStreet: z.string().optional().describe("Partner street"),
@@ -67,8 +67,8 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
           const con = item.ele(NS.con, "con:contract").att("version", "2.0");
           const desc = con.ele(NS.con, "con:contractDesc");
 
-          if (params.number) desc.ele(NS.con, "con:number").txt(params.number);
-          if (params.datePlan) desc.ele(NS.con, "con:datePlan").txt(toIsoDate(params.datePlan));
+          if (params.number) desc.ele(NS.con, "con:number").ele(NS.typ, "typ:numberRequested").txt(params.number);
+          if (params.datePlan) desc.ele(NS.con, "con:datePlanStart").txt(toIsoDate(params.datePlan));
           if (params.text) desc.ele(NS.con, "con:text").txt(params.text);
 
           const hasPartner =
@@ -92,30 +92,6 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
               `Contract created successfully.${result.producedId != null ? ` ID: ${result.producedId}` : ""} ${result.message}`
             )
           : err(result.message);
-      } catch (e) {
-        return err((e as Error).message);
-      }
-    }
-  );
-
-  server.tool(
-    "pohoda_delete_contract",
-    "Delete a contract from POHODA by ID. Requires the contract ID.",
-    {
-      id: z.number().describe("Contract ID to delete (required)"),
-    },
-    async (params) => {
-      try {
-        const xml = buildImportDoc({ ico: client.ico }, (item) => {
-          const con = item.ele(NS.con, "con:contract").att("version", "2.0");
-          const actionType = con.ele(NS.con, "con:actionType");
-          const del = actionType.ele(NS.con, "con:delete");
-          const filter = del.ele(NS.ftr, "ftr:filter");
-          filter.ele(NS.ftr, "ftr:id").txt(String(params.id));
-        });
-        const response = await client.sendXml(xml);
-        const result = extractImportResult(parseResponse(response));
-        return result.success ? ok(`Contract deleted successfully. ${result.message}`) : err(result.message);
       } catch (e) {
         return err((e as Error).message);
       }

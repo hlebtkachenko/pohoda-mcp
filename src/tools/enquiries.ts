@@ -38,7 +38,6 @@ export function registerEnquiryTools(server: McpServer, client: PohodaClient): v
           NS.lst,
           "lst:requestEnquiry",
           (req) => {
-            if (params.enquiryType) req.att("enquiryType", params.enquiryType);
             const filterParams: ListFilterParams = {
               id: params.id,
               dateFrom: params.dateFrom,
@@ -47,7 +46,8 @@ export function registerEnquiryTools(server: McpServer, client: PohodaClient): v
               lastChanges: params.lastChanges,
             };
             applyFilter(req, filterParams);
-          }
+          },
+          { enquiryType: params.enquiryType }
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);

@@ -16,7 +16,7 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
       companyName: z.string().optional().describe("Filter by company name"),
       ico: z.string().optional().describe("Filter by IČO (company ID number)"),
       lastChanges: z.string().optional().describe("Filter by last changes date (DD.MM.YYYY or YYYY-MM-DD)"),
-      code: z.string().optional().describe("Filter by address code"),
+      number: z.string().optional().describe("Filter by address book number"),
     },
     async (params) => {
       try {
@@ -25,14 +25,14 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
           companyName: params.companyName,
           ico: params.ico,
           lastChanges: params.lastChanges,
-          code: params.code,
+          number: params.number,
         };
         const xml = buildExportRequest(
           { ico: client.ico },
           "lst:listAddressBookRequest",
           NS.lAdb,
           "lst:requestAddressBook",
-          (req) => applyFilter(req, filterParams)
+          (req) => applyFilter(req, filterParams, "addressbook")
         );
         const response = await client.sendXml(xml);
         const parsed = parseResponse(response);
@@ -64,7 +64,6 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
           const adb = item.ele(NS.adb, "adb:addressbook").att("version", "2.0");
           const header = adb.ele(NS.adb, "adb:addressbookHeader");
-          header.ele(NS.adb, "adb:addressbookType").txt("company");
           const identity = header.ele(NS.adb, "adb:identity");
           const typAddr = identity.ele(NS.typ, "typ:address");
           typAddr.ele(NS.typ, "typ:name").txt(params.name);
@@ -117,7 +116,6 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
           const hasIdentity =
             params.name ?? params.street ?? params.city ?? params.zip ?? params.ico ?? params.dic;
           if (hasIdentity) {
-            header.ele(NS.adb, "adb:addressbookType").txt("company");
             const identity = header.ele(NS.adb, "adb:identity");
             const typAddr = identity.ele(NS.typ, "typ:address");
             if (params.name) typAddr.ele(NS.typ, "typ:name").txt(params.name);
