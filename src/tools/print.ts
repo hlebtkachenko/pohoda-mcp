@@ -68,7 +68,7 @@ export function registerPrintTools(server: McpServer, client: PohodaClient): voi
         agenda: z.enum(PRINT_AGENDAS).describe("Agenda of the record, e.g. vydane_faktury, prijate_faktury, banka, pokladna"),
         recordId: z.number().int().positive().describe("Record ID (from a list tool)"),
         reportId: z.number().int().positive().describe("Print report ID"),
-        pdfPath: z.string().optional().describe("Target PDF path on the POHODA machine, e.g. C:\\Export\\invoice.pdf"),
+        pdfPath: z.string().optional().describe("Local target PDF path on the POHODA machine, e.g. C:\\Export\\invoice.pdf (no network paths)"),
         returnPdf: z.boolean().optional().describe("Return the PDF as an embedded resource (requires pdfPath)"),
         printer: z.string().optional().describe("Printer name; omit for the default printer"),
         copies: z.number().int().min(1).max(20).optional().describe("Number of copies (1-20)"),
@@ -78,6 +78,10 @@ export function registerPrintTools(server: McpServer, client: PohodaClient): voi
     async (params): Promise<ToolResult> => {
       try {
         if (params.returnPdf && !params.pdfPath) return err("returnPdf requires pdfPath.");
+        // UNC targets would make the POHODA machine authenticate to a remote host (NTLM leak).
+        if (params.pdfPath && (/^[\\/]{2}/.test(params.pdfPath) || !/\.pdf$/i.test(params.pdfPath))) {
+          return err("pdfPath must be a local path ending in .pdf (no UNC/network paths).");
+        }
         const parsed = parseResponse(await client.sendXml(buildPrintRequest(client.ico, params)));
         const result = extractImportResult(parsed);
         if (!result.success) return err(result.message);
