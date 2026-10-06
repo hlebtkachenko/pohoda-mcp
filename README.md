@@ -1,16 +1,16 @@
 # POHODA MCP Server
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Node.js Version](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Node.js Version](https://img.shields.io/badge/node-%3E%3D22-brightgreen)
+![TypeScript](https://img.shields.io/badge/TypeScript-7-blue)
 
 MCP server for [POHODA](https://www.stormware.cz/pohoda/) (Stormware) accounting software. Manage invoices, stock, orders, bank documents, warehouse, and accounting from any MCP-compatible client.
 
-48 tools covering all major POHODA agendas via mServer XML API.
+48 tools covering all major POHODA agendas via mServer XML API, including PDF printing and a raw XML escape hatch. Every tool's XML is checked against Stormware's official XSD schema.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 - POHODA with mServer enabled and running
 - mServer user credentials with XML communication rights
 
@@ -109,16 +109,30 @@ With environment variables set for authentication (see below).
 | `POHODA_TIMEOUT` | No | Request timeout in ms (default: 120000) |
 | `POHODA_MAX_RETRIES` | No | Max retries on timeout/503 (default: 2) |
 | `POHODA_CHECK_DUPLICITY` | No | Enable duplicate import checks (default: false) |
+| `POHODA_LIST_LIMIT` | No | Max records a list tool returns (default: 100); larger results are truncated with a note |
+| `POHODA_EXE_PATH` | No | Path to `Pohoda.exe`; with `POHODA_CONFIG_NAME` enables mServer autostart |
+| `POHODA_CONFIG_NAME` | No | mServer configuration name to start and stop |
+
+### mServer autostart (Windows)
+
+With `POHODA_EXE_PATH` and `POHODA_CONFIG_NAME` set, the server checks on the first tool call whether mServer answers, and if not runs `Pohoda.exe /HTTP start "<config>"` and waits up to 30 s. On shutdown it stops mServer again, but only if it started it.
 
 ## Tools
 
-### System (3)
+### System (4)
 
 | Tool | Description |
 |------|-------------|
 | `pohoda_status` | Check mServer status (processing queue, idle/working) |
 | `pohoda_company_info` | Get accounting unit info (company name, database, period) |
 | `pohoda_download_file` | Download a file from POHODA's documents folder |
+| `pohoda_raw_xml` | Send any dataPackItem XML not covered by a dedicated tool; the envelope and all namespace prefixes are added automatically |
+
+### Print (1)
+
+| Tool | Description |
+|------|-------------|
+| `pohoda_print` | Print a record with a print report, or save it as PDF on the POHODA machine and optionally return the PDF in the response |
 
 ### Address Book (4)
 
@@ -129,13 +143,14 @@ With environment variables set for authentication (see below).
 | `pohoda_update_address` | Update an existing contact by ID |
 | `pohoda_delete_address` | Delete a contact by ID |
 
-### Invoices (3)
+### Invoices (2)
 
 | Tool | Description |
 |------|-------------|
-| `pohoda_list_invoices` | Export invoices — issued, received, advance, credit notes, receivables, commitments |
+| `pohoda_list_invoices` | Export invoices of one type: issued, received, advance, proforma, credit notes, receivables, commitments |
 | `pohoda_create_invoice` | Create an invoice with line items, partner, symbols, VAT |
-| `pohoda_delete_invoice` | Delete an invoice by ID |
+
+The XML API has no delete for invoices or contracts.
 
 ### Orders (3)
 
@@ -143,7 +158,7 @@ With environment variables set for authentication (see below).
 |------|-------------|
 | `pohoda_list_orders` | Export issued/received orders with filters |
 | `pohoda_create_order` | Create an order with items and partner |
-| `pohoda_delete_order` | Delete an order by ID |
+| `pohoda_delete_order` | Delete an order by ID and type |
 
 ### Offers (2)
 
@@ -159,13 +174,12 @@ With environment variables set for authentication (see below).
 | `pohoda_list_enquiries` | Export issued/received enquiries |
 | `pohoda_create_enquiry` | Create an enquiry with items |
 
-### Contracts (3)
+### Contracts (2)
 
 | Tool | Description |
 |------|-------------|
 | `pohoda_list_contracts` | Export contracts with filters |
 | `pohoda_create_contract` | Create a new contract |
-| `pohoda_delete_contract` | Delete a contract by ID |
 
 ### Bank Documents (2)
 
@@ -209,14 +223,14 @@ With environment variables set for authentication (see below).
 | `pohoda_list_prodejky` | Export sales documents (prodejky) |
 | `pohoda_create_prodejka` | Create a sales document |
 | `pohoda_list_prevodky` | Export transfer documents (převodky) |
-| `pohoda_create_prevodka` | Create a transfer document |
+| `pohoda_create_prevodka` | Create a transfer document (items by stock code) |
 
 ### Production & Service (4)
 
 | Tool | Description |
 |------|-------------|
 | `pohoda_list_vyroba` | Export production documents |
-| `pohoda_create_vyroba` | Create a production document |
+| `pohoda_create_vyroba` | Create a production document (items by stock code) |
 | `pohoda_list_service` | Export service records |
 | `pohoda_create_service` | Create a service record |
 
@@ -225,15 +239,24 @@ With environment variables set for authentication (see below).
 | Tool | Description |
 |------|-------------|
 | `pohoda_list_accountancy` | Export accounting journal entries |
-| `pohoda_list_balance` | Export saldo/balance records |
+| `pohoda_list_balance` | Export open saldo/balance records as of a date |
 | `pohoda_list_movements` | Export stock movement records |
-| `pohoda_list_vat` | Export VAT classification records |
+| `pohoda_list_vat` | Export the VAT classification codebook |
 
 ### Settings (1)
 
 | Tool | Description |
 |------|-------------|
 | `pohoda_list_settings` | Export settings (numerical series, bank accounts, cash registers, centres, activities, payment methods, stores, storage, categories, accounting units) |
+
+## Resources
+
+| URI | Content |
+|-----|---------|
+| `pohoda://enums/vat-rates` | Allowed `rateVAT` values |
+| `pohoda://enums/invoice-types` | `invoiceType` values |
+| `pohoda://enums/print-agendas` | Czech agenda names for `pohoda_print` |
+| `pohoda://enums/date-formats` | Accepted date formats |
 
 ## Docker
 
@@ -259,37 +282,14 @@ Multi-stage build, runs as non-root `node` user.
 - Path traversal prevention for file downloads (normalize + reject `..` prefixed paths)
 - Input validation via Zod on all tool parameters
 
-## Architecture
+## Development
 
+```bash
+npm test            # build + unit and end-to-end tests against a fake mServer
+npm run check:xsd   # validate every tool's XML against the official XSD (needs xmllint and internet on first run)
 ```
-src/
-  index.ts              Entry point, env validation, tool registration
-  client.ts             HTTP client (STW-Auth, Windows-1250, gzip/deflate, retries)
-  xml/
-    builder.ts          DataPack XML envelope builder (xmlbuilder2)
-    parser.ts           ResponsePack parser (fast-xml-parser)
-    namespaces.ts       40+ POHODA XML namespace URIs
-  core/
-    types.ts            ToolResult interface, ok/err helpers
-    shared.ts           Date conversion, env helpers
-    filters.ts          Filter builder for export requests
-  tools/
-    system.ts           Status, company info, file download (3 tools)
-    addresses.ts        Address book CRUD (4 tools)
-    invoices.ts         All invoice types (3 tools)
-    orders.ts           Issued/received orders (3 tools)
-    offers.ts           Offers (2 tools)
-    enquiries.ts        Enquiries (2 tools)
-    contracts.ts        Contracts (3 tools)
-    bank.ts             Bank documents (2 tools)
-    vouchers.ts         Cash vouchers (2 tools)
-    internal_docs.ts    Internal documents (2 tools)
-    stock.ts            Stock/inventory CRUD (5 tools)
-    warehouse.ts        Příjemky, výdejky, prodejky, převodky (8 tools)
-    production.ts       Production and service records (4 tools)
-    reports.ts          Accountancy, balance, movements, VAT (4 tools)
-    settings.ts         Numerical series, bank accounts, centres... (1 tool)
-```
+
+Code layout and design notes: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## POHODA mServer Setup
 
@@ -303,7 +303,7 @@ For internet access, use HTTPS or VPN. mServer is primarily designed for local n
 
 ## Tech Stack
 
-- TypeScript
+- TypeScript 7
 - `@modelcontextprotocol/sdk`
 - Zod (schema validation)
 - xmlbuilder2 (XML generation)
@@ -315,6 +315,10 @@ For internet access, use HTTPS or VPN. mServer is primarily designed for local n
 
 - [POHODA XML Documentation](https://www.stormware.cz/xml)
 - [POHODA Developer Guide](https://www.stormware.cz/pohoda/xml/obecny-obchod/pro-vyvojare/)
+
+## Credits
+
+`pohoda_print`, `pohoda_raw_xml`, mServer autostart and the enum resources follow ideas from [dg/pohoda-mcp](https://github.com/dg/pohoda-mcp).
 
 ## License
 
