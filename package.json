@@ -1,6 +1,6 @@
 {
   "name": "pohoda-mcp",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "MCP server for POHODA accounting software — full XML API coverage via mServer",
   "type": "module",
   "main": "dist/index.js",
@@ -22,21 +22,32 @@
   "bugs": {
     "url": "https://github.com/hlebtkachenko/pohoda-mcp/issues"
   },
-  "keywords": ["pohoda", "stormware", "accounting", "mcp", "xml-api", "mserver"],
-  "engines": { "node": ">=20" },
+  "keywords": [
+    "pohoda",
+    "stormware",
+    "accounting",
+    "mcp",
+    "xml-api",
+    "mserver"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "tsc && node --test",
+    "check:xsd": "tsc && node scripts/check-xsd.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.0",
-    "fast-xml-parser": "^5.2.0",
-    "iconv-lite": "^0.6.3",
-    "xmlbuilder2": "^3.1.1",
-    "zod": "^3.23.0"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "fast-xml-parser": "^5.11.2",
+    "iconv-lite": "^0.7.3",
+    "xmlbuilder2": "^4.0.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.8.3"
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2"
   }
 }
