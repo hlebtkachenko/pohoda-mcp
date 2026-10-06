@@ -79,8 +79,9 @@ export function registerPrintTools(server: McpServer, client: PohodaClient): voi
       try {
         if (params.returnPdf && !params.pdfPath) return err("returnPdf requires pdfPath.");
         // UNC targets would make the POHODA machine authenticate to a remote host (NTLM leak).
-        if (params.pdfPath && (/^[\\/]{2}/.test(params.pdfPath) || !/\.pdf$/i.test(params.pdfPath))) {
-          return err("pdfPath must be a local path ending in .pdf (no UNC/network paths).");
+        // Allowlist: drive-letter path ending in .pdf; anything else (UNC, \\?\, whitespace tricks) is refused.
+        if (params.pdfPath && !/^[A-Za-z]:\\[^"<>|?*]*\.pdf$/i.test(params.pdfPath)) {
+          return err("pdfPath must be a local drive path ending in .pdf, e.g. C:\\Export\\invoice.pdf (no UNC/network paths).");
         }
         const parsed = parseResponse(await client.sendXml(buildPrintRequest(client.ico, params)));
         const result = extractImportResult(parsed);

@@ -96,7 +96,7 @@ test("print returns the PDF as an embedded resource", async () => {
 });
 
 test("print rejects network and non-PDF paths", async () => {
-  for (const pdfPath of ["\\\\attacker\\share\\a.pdf", "//attacker/share/a.pdf", "C:\\Windows\\a.exe"]) {
+  for (const pdfPath of ["\\\\attacker\\share\\a.pdf", "//attacker/share/a.pdf", "C:\\Windows\\a.exe", " \\\\attacker\\s\\a.pdf", "\\\\?\\UNC\\attacker\\s\\a.pdf", "export\\a.pdf"]) {
     const r = await call("pohoda_print", { agenda: "banka", recordId: 1, reportId: 1, pdfPath });
     assert.ok(r.isError, pdfPath);
   }
