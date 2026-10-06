@@ -32,6 +32,7 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
       number: z.string().optional().describe("Filter by document number"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -81,6 +82,7 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
         .optional()
         .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit, code"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
@@ -148,6 +150,7 @@ export function registerOrderTools(server: McpServer, client: PohodaClient): voi
       id: z.number().describe("Order ID to delete (required)"),
       orderType: orderTypeEnum.describe("Order type (issuedOrder or receivedOrder)"),
     },
+    { destructiveHint: true },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

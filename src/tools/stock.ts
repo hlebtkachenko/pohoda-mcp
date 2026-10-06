@@ -18,6 +18,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
       store: z.string().optional().describe("Store name filter"),
       lastChanges: z.string().optional().describe("Only items changed after this date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -61,6 +62,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
       description: z.string().optional().describe("Extended description"),
       quantity: z.number().optional().describe("Initial quantity"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
@@ -102,6 +104,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
       rateVAT: z.enum(["none", "low", "high"]).optional().describe("New selling VAT rate"),
       note: z.string().optional().describe("New note"),
     },
+    { destructiveHint: false, idempotentHint: true },
     async (params) => {
       try {
         if (!params.id && !params.code) return err("Either id or code is required to identify the stock item.");
@@ -132,6 +135,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
     "pohoda_delete_stock",
     "Delete a stock/inventory item from POHODA",
     { id: z.number().optional().describe("Stock item ID"), code: z.string().optional().describe("Stock code") },
+    { destructiveHint: true },
     async (params) => {
       try {
         if (!params.id && !params.code) return err("Either id or code is required.");
@@ -155,6 +159,7 @@ export function registerStockTools(server: McpServer, client: PohodaClient) {
     "pohoda_list_stores",
     "Export list of stores (warehouses) from POHODA",
     {},
+    { readOnlyHint: true },
     async () => {
       try {
         const xml = buildExportRequest(

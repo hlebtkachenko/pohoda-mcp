@@ -17,6 +17,7 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
       dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -44,6 +45,7 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
       onlyUnbalanced: z.boolean().optional().describe("Leave out fully settled records"),
       pairByIco: z.boolean().optional().describe("Pair by pairing symbol and IČO instead of pairing symbol only"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -75,6 +77,7 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
       dateFrom: z.string().optional().describe("Filter from date (DD.MM.YYYY or YYYY-MM-DD)"),
       dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -98,6 +101,7 @@ export function registerReportTools(server: McpServer, client: PohodaClient): vo
     "pohoda_list_vat",
     "List the VAT classification codebook (členění DPH) from POHODA: the codes used to assign documents to VAT return lines. Read-only. Returns JSON array.",
     {},
+    { readOnlyHint: true },
     async () => {
       try {
         const xml = buildExportRequest(

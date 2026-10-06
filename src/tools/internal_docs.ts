@@ -25,6 +25,7 @@ export function registerInternalDocTools(server: McpServer, client: PohodaClient
       dateTill: z.string().optional().describe("Filter till date (DD.MM.YYYY or YYYY-MM-DD)"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -57,6 +58,7 @@ export function registerInternalDocTools(server: McpServer, client: PohodaClient
         .optional()
         .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

@@ -30,6 +30,7 @@ export function registerEnquiryTools(server: McpServer, client: PohodaClient): v
       companyName: z.string().optional().describe("Filter by company name"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -77,6 +78,7 @@ export function registerEnquiryTools(server: McpServer, client: PohodaClient): v
         .optional()
         .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

@@ -28,6 +28,7 @@ export function registerSettingsTools(server: McpServer, client: PohodaClient) {
     {
       settingsType: z.enum(settingsTypeEnum).describe("Type of settings to export"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const cfg = SETTINGS_TYPES[params.settingsType];

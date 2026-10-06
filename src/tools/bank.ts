@@ -28,6 +28,7 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
       companyName: z.string().optional().describe("Filter by company name"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -69,6 +70,7 @@ export function registerBankTools(server: McpServer, client: PohodaClient): void
         .optional()
         .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high)"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

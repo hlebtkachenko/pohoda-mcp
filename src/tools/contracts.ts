@@ -19,6 +19,7 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
       companyName: z.string().optional().describe("Filter by company name"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -61,6 +62,7 @@ export function registerContractTools(server: McpServer, client: PohodaClient): 
       partnerIco: z.string().optional().describe("Partner IČO"),
       note: z.string().optional().describe("Note"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

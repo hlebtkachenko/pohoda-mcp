@@ -44,6 +44,7 @@ export function registerSystemTools(server: McpServer, client: PohodaClient): vo
     "pohoda_status",
     "Get POHODA mServer status: processing queue count, server state (idle/working), and server address. Use to check if the server is ready to accept requests.",
     {},
+    { readOnlyHint: true },
     async () => {
       try {
         const xml = await client.getStatus();
@@ -64,6 +65,7 @@ export function registerSystemTools(server: McpServer, client: PohodaClient): vo
     "pohoda_company_info",
     "Get POHODA company/accounting unit info: company name, database name, accounting period, and year. Requires authenticated connection.",
     {},
+    { readOnlyHint: true },
     async () => {
       try {
         const xml = await client.getCompanyInfo();
@@ -86,6 +88,7 @@ export function registerSystemTools(server: McpServer, client: PohodaClient): vo
     {
       filePath: z.string().describe("Relative path to the file in POHODA documents storage"),
     },
+    { readOnlyHint: true },
     async ({ filePath }) => {
       try {
         const buf = await client.downloadFile(filePath);

@@ -52,7 +52,7 @@ function buildWarehouseListTool(
   listTag: string,
   requestTag: string,
 ) {
-  server.tool(toolName, description, listFilterFields, async (params) => {
+  server.tool(toolName, description, listFilterFields, { readOnlyHint: true }, async (params) => {
     try {
       const xml = buildExportRequest(
         { ico: client.ico },
@@ -93,6 +93,7 @@ function buildWarehouseCreateTool(
       ...partnerFields,
       items: z.array(itemSchema).optional().describe("Line items"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

@@ -104,17 +104,24 @@ export function extractListData(response: PohodaResponse): unknown[] {
   for (const item of response.items) {
     if (!item.data) continue;
     const d = item.data as Record<string, unknown>;
+    // Take only the first document array; later keys are metadata, not records.
+    let found = false;
     for (const val of Object.values(d)) {
+      if (found) break;
       if (Array.isArray(val)) {
         results.push(...val);
+        found = true;
       } else if (val && typeof val === "object") {
         const inner = val as Record<string, unknown>;
         for (const v2 of Object.values(inner)) {
           if (Array.isArray(v2)) {
             results.push(...v2);
+            found = true;
+            break;
           }
         }
-        if (results.length === 0) results.push(val);
+        if (!found) results.push(val);
+        found = true;
       }
     }
   }

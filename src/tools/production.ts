@@ -18,6 +18,7 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
       dateTill: z.string().optional().describe("Date to"),
       lastChanges: z.string().optional().describe("Only changed after this date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -48,6 +49,7 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
         stockCode: z.string().describe("Code of the produced stock card"),
       })).optional().describe("Produced items"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
@@ -87,6 +89,7 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
       dateTill: z.string().optional().describe("Date to"),
       lastChanges: z.string().optional().describe("Only changed after this date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -116,6 +119,7 @@ export function registerProductionTools(server: McpServer, client: PohodaClient)
       partnerName: z.string().optional(),
       note: z.string().optional(),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

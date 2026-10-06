@@ -18,6 +18,7 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
       lastChanges: z.string().optional().describe("Filter by last changes date (DD.MM.YYYY or YYYY-MM-DD)"),
       number: z.string().optional().describe("Filter by address book number"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const filterParams: ListFilterParams = {
@@ -59,6 +60,7 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
       web: z.string().optional().describe("Website URL"),
       note: z.string().optional().describe("Note or comment"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
@@ -104,6 +106,7 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
       web: z.string().optional().describe("Website URL"),
       note: z.string().optional().describe("Note or comment"),
     },
+    { destructiveHint: false, idempotentHint: true },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {
@@ -145,6 +148,7 @@ export function registerAddressTools(server: McpServer, client: PohodaClient): v
     {
       id: z.number().describe("Address ID to delete (required)"),
     },
+    { destructiveHint: true },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

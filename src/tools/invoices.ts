@@ -46,6 +46,7 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
       ico: z.string().optional().describe("Filter by IČO"),
       lastChanges: z.string().optional().describe("Filter by last changes date"),
     },
+    { readOnlyHint: true },
     async (params) => {
       try {
         const xml = buildExportRequest(
@@ -102,6 +103,7 @@ export function registerInvoiceTools(server: McpServer, client: PohodaClient): v
         .optional()
         .describe("Line items: text, quantity, unitPrice, rateVAT (none|low|high), optional unit, code"),
     },
+    { destructiveHint: false },
     async (params) => {
       try {
         const xml = buildImportDoc({ ico: client.ico }, (item) => {

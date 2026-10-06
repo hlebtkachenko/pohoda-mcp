@@ -146,3 +146,8 @@ test("parser keeps line items as arrays but not their fields or response details
   const created = parseResponse(pack(`<rsp:responsePackItem version="2.0" state="ok"><inv:invoiceResponse xmlns:inv="i" version="2.0" state="ok"><producedDetails><id>99</id></producedDetails></inv:invoiceResponse></rsp:responsePackItem>`));
   assert.equal(created.items[0].data.producedDetails.id, 99);
 });
+
+test("list extraction takes only the first document array", () => {
+  const parsed = { state: "ok", items: [{ state: "ok", data: { listStock: { stock: [{ id: 1 }, { id: 2 }], other: [{ id: 99 }] } } }] };
+  assert.deepEqual(extractListData(parsed).map((r) => r.id), [1, 2]);
+});
